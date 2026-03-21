@@ -1,17 +1,26 @@
 ---
-
+// biome-ignore lint/correctness/noUnusedImports: Astro uses this component in template markup.
+import PurrcentageApp from "@/components/purrcentage-app";
+import "../styles/global.css";
 ---
 
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>Purrcentage</title>
+		<meta
+			name="description"
+			content="A static cat food transition calculator for mixed cup and can feeding plans."
+		/>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<main class="app-shell">
+			<PurrcentageApp client:load />
+		</main>
 	</body>
 </html>

@@ -1,43 +1,99 @@
-# Astro Starter Kit: Minimal
+# Purrcentage
 
-```sh
-pnpm create astro@latest -- --template minimal
+Purrcentage is a static Astro app for cat owners who need to mix foods by calories while transitioning to a new diet. It supports cup-based and can-based foods, a one-shot daily calculator, and a customizable 7-day planning mode.
+
+## Stack
+
+- Astro
+- React + TypeScript
+- Tailwind CSS v4
+- shadcn/ui
+- Biome
+- Vitest
+
+## Local development
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Open the local URL from Astro, usually `http://localhost:4321`.
 
-## 🚀 Project Structure
+## Useful commands
 
-Inside of your Astro project, you'll see the following folders and files:
+```bash
+pnpm dev
+pnpm build
+pnpm test
+pnpm biome check .
+pnpm check
+pnpm lint
+pnpm format
+```
+
+`pnpm biome check .` and `pnpm check` both run Biome checks. `pnpm build` outputs the static site to `dist`.
+
+## Deploy to Vercel
+
+This project is fully static, so it deploys cleanly on Vercel with no server runtime or environment variables.
+
+### Option 1: import the repo in Vercel
+
+1. Push this project to GitHub, GitLab, or Bitbucket.
+2. In Vercel, choose **Add New Project**.
+3. Import the repository.
+4. Use these settings if Vercel does not auto-detect them:
 
 ```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+Framework Preset: Astro
+Install Command: pnpm install
+Build Command: pnpm build
+Output Directory: dist
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+5. Click **Deploy**.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+### Option 2: deploy from the CLI
 
-Any static assets, like images, can be placed in the `public/` directory.
+```bash
+pnpm install
+pnpm build
+pnpm dlx vercel
+```
 
-## 🧞 Commands
+For production deploys:
 
-All commands are run from the root of the project, from a terminal:
+```bash
+pnpm dlx vercel --prod
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
+## Product behavior
 
-## 👀 Want to learn more?
+- **Simple calculator**: lock in one or more known servings and solve the remaining calories with one selected food.
+- **Planning mode**: edit a default 7-day transition schedule and get day-by-day serving amounts for each food.
+- **Mixed units**:
+  - `kcal per cup` for cup-based foods
+  - `kcal per can` for canned foods
+- **Output**:
+  - cup foods show cups and tablespoons
+  - canned foods show can fractions
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Default transition guidance
+
+The starter 7-day schedule is based on common veterinary gradual-transition patterns and can be edited in the UI.
+
+- VCA Animal Hospitals describes a 25% / 50% / 75% transition pattern, with each step typically lasting 2 to 3 days.
+- AAHA Nutritional Assessment Guidelines note that some pets do better with gradual food changes over roughly 7 to 10 days.
+- The calorie estimator uses AAHA adult feline starter guidance: `RER = 30 x body weight in kg + 70`.
+
+Sources:
+
+- [VCA: Creating a Weight Reduction Plan for Cats](https://vcahospitals.com/know-your-pet/creating-a-weight-reduction-plan-for-cats)
+- [AAHA Nutritional Assessment Guidelines for Dogs and Cats](https://www.aaha.org/wp-content/uploads/globalassets/02-guidelines/weight-management/nutritionalassessmentguidelines.pdf)
+- [AAHA: Nutrition and Weight, Young Adult Cats](https://www.aaha.org/resources/2021-aaha-aafp-feline-life-stage-guidelines/nutrition-and-weight-young-adult-cats/)
+
+## Notes
+
+- This tool is for planning and estimation, not diagnosis.
+- Cats with medical conditions, kittens, seniors, underweight cats, and cats with poor appetite should have their feeding plan checked by a veterinarian.

@@ -1,130 +1,637 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource/archivo-black";
+@import "@fontsource-variable/work-sans";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+	--font-heading: "Archivo Black", sans-serif;
+	--font-sans: "Work Sans Variable", sans-serif;
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
+	--radius-3xl: calc(var(--radius) * 2.2);
+	--radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+	--background: oklch(0.97 0.03 87);
+	--foreground: oklch(0.21 0.03 91);
+	--card: oklch(0.995 0.015 90);
+	--card-foreground: oklch(0.21 0.03 91);
+	--popover: oklch(0.995 0.015 90);
+	--popover-foreground: oklch(0.21 0.03 91);
+	--primary: oklch(0.76 0.18 79);
+	--primary-foreground: oklch(0.18 0.02 95);
+	--secondary: oklch(0.8 0.15 158);
+	--secondary-foreground: oklch(0.18 0.02 95);
+	--muted: oklch(0.92 0.03 89);
+	--muted-foreground: oklch(0.42 0.04 85);
+	--accent: oklch(0.77 0.16 25);
+	--accent-foreground: oklch(0.18 0.02 95);
+	--destructive: oklch(0.66 0.2 24);
+	--border: oklch(0.21 0.03 91);
+	--input: oklch(0.95 0.02 90);
+	--ring: oklch(0.7 0.2 25);
+	--chart-1: oklch(0.78 0.18 79);
+	--chart-2: oklch(0.8 0.15 158);
+	--chart-3: oklch(0.77 0.16 25);
+	--chart-4: oklch(0.7 0.12 225);
+	--chart-5: oklch(0.83 0.12 115);
+	--radius: 0.2rem;
+	--sidebar: oklch(0.995 0.015 90);
+	--sidebar-foreground: oklch(0.21 0.03 91);
+	--sidebar-primary: oklch(0.76 0.18 79);
+	--sidebar-primary-foreground: oklch(0.18 0.02 95);
+	--sidebar-accent: oklch(0.92 0.03 89);
+	--sidebar-accent-foreground: oklch(0.21 0.03 91);
+	--sidebar-border: oklch(0.21 0.03 91);
+	--sidebar-ring: oklch(0.7 0.2 25);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+	--background: oklch(0.19 0.03 91);
+	--foreground: oklch(0.97 0.02 88);
+	--card: oklch(0.26 0.03 91);
+	--card-foreground: oklch(0.97 0.02 88);
+	--popover: oklch(0.26 0.03 91);
+	--popover-foreground: oklch(0.97 0.02 88);
+	--primary: oklch(0.8 0.16 79);
+	--primary-foreground: oklch(0.18 0.02 95);
+	--secondary: oklch(0.74 0.13 158);
+	--secondary-foreground: oklch(0.18 0.02 95);
+	--muted: oklch(0.33 0.03 91);
+	--muted-foreground: oklch(0.84 0.02 88);
+	--accent: oklch(0.74 0.15 25);
+	--accent-foreground: oklch(0.18 0.02 95);
+	--destructive: oklch(0.7 0.21 24);
+	--border: oklch(0.97 0.02 88);
+	--input: oklch(0.31 0.03 91);
+	--ring: oklch(0.78 0.17 25);
+	--chart-1: oklch(0.8 0.16 79);
+	--chart-2: oklch(0.74 0.13 158);
+	--chart-3: oklch(0.74 0.15 25);
+	--chart-4: oklch(0.74 0.12 225);
+	--chart-5: oklch(0.83 0.12 115);
+	--sidebar: oklch(0.26 0.03 91);
+	--sidebar-foreground: oklch(0.97 0.02 88);
+	--sidebar-primary: oklch(0.8 0.16 79);
+	--sidebar-primary-foreground: oklch(0.18 0.02 95);
+	--sidebar-accent: oklch(0.33 0.03 91);
+	--sidebar-accent-foreground: oklch(0.97 0.02 88);
+	--sidebar-border: oklch(0.97 0.02 88);
+	--sidebar-ring: oklch(0.78 0.17 25);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
-  html {
-    @apply font-sans;
-    }
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	html {
+		@apply font-sans;
+	}
+
+	body {
+		@apply bg-background text-foreground;
+		background-image:
+			linear-gradient(
+				to right,
+				color-mix(in srgb, var(--foreground) 8%, transparent) 1px,
+				transparent 1px
+			),
+			linear-gradient(
+				to bottom,
+				color-mix(in srgb, var(--foreground) 8%, transparent) 1px,
+				transparent 1px
+			);
+		background-size: 32px 32px;
+		min-height: 100vh;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-heading);
+		letter-spacing: -0.03em;
+	}
+
+	::selection {
+		background: color-mix(in srgb, var(--accent) 80%, white);
+		color: var(--foreground);
+	}
+}
+
+@layer components {
+	.app-shell {
+		@apply w-full px-3 py-3 md:px-4 md:py-4;
+		height: 100dvh;
+		min-height: 100dvh;
+		overflow: hidden;
+	}
+
+	.app-layout {
+		@apply grid gap-3;
+		grid-template-rows: auto minmax(0, 1fr);
+		height: 100%;
+		min-height: 0;
+	}
+
+	.top-bar {
+		@apply flex items-center justify-start;
+	}
+
+	.brand-mark {
+		@apply inline-flex items-center gap-2 rounded-md border-2 border-foreground bg-card px-3 py-2 text-lg font-semibold;
+		box-shadow: 4px 4px 0 0 var(--color-foreground);
+	}
+
+	.brand-mark svg {
+		@apply size-5;
+	}
+
+	.app-tabs {
+		@apply grid min-h-0 gap-3;
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+
+	.mode-bar {
+		@apply flex items-center justify-start;
+	}
+
+	.mode-tabs {
+		@apply w-full md:w-fit;
+	}
+
+	.dashboard-grid {
+		@apply grid min-h-0 gap-3;
+		flex: 1 1 0%;
+		grid-template-columns: 18rem 24rem minmax(0, 1fr);
+	}
+
+	.panel-column,
+	.mode-panel,
+	.mode-card,
+	.mode-content,
+	.mode-left,
+	.mode-right {
+		@apply min-h-0;
+	}
+
+	.panel-column,
+	.mode-card {
+		@apply overflow-hidden;
+	}
+
+	.mode-panel[data-state="inactive"] {
+		display: none;
+	}
+
+	.panel-card,
+	.compact-card,
+	[data-slot="alert"],
+	[data-slot="input"],
+	[data-slot="select-trigger"],
+	[data-slot="table-container"],
+	[data-slot="tabs-list"] {
+		@apply border-2 border-foreground;
+		box-shadow: 4px 4px 0 0 var(--color-foreground);
+	}
+
+	[data-slot="button"] {
+		@apply h-11 border-2 border-foreground px-4 text-base font-semibold text-foreground;
+		box-shadow: 3px 3px 0 0 var(--color-foreground);
+	}
+
+	[data-slot="button"][data-size="sm"] {
+		@apply h-9 text-sm;
+	}
+
+	[data-slot="button"]:active {
+		box-shadow: 1px 1px 0 0 var(--color-foreground);
+		transform: translate(2px, 2px);
+	}
+
+	[data-slot="tabs-list"] {
+		@apply bg-card p-1;
+	}
+
+	[data-slot="tabs-trigger"] {
+		@apply min-w-42 px-4 text-base;
+	}
+
+	[data-slot="tabs-trigger"][data-active] {
+		background: color-mix(in srgb, var(--secondary) 50%, white);
+		color: var(--foreground);
+	}
+
+	[data-slot="badge"] {
+		@apply border-2 border-foreground px-2.5 py-1 text-sm;
+	}
+
+	[data-slot="input"],
+	[data-slot="select-trigger"] {
+		@apply h-12 text-lg;
+	}
+
+	[data-slot="field-label"] {
+		@apply text-base font-semibold;
+	}
+
+	[data-slot="table"] {
+		@apply text-base;
+	}
+
+	[data-slot="table-head"] {
+		@apply h-12 px-3 text-sm uppercase tracking-[0.08em];
+	}
+
+	[data-slot="table-cell"] {
+		@apply px-3 py-3;
+	}
+
+	[data-slot="table-header"] {
+		background: color-mix(in srgb, var(--primary) 26%, white);
+	}
+
+	[data-slot="table-row"]:nth-child(even) {
+		background: color-mix(in srgb, var(--muted) 70%, white);
+	}
+
+	.compact-header {
+		@apply gap-2 px-4 py-4;
+	}
+
+	.compact-header [data-slot="card-title"] {
+		@apply text-2xl;
+	}
+
+	.panel-body {
+		@apply flex flex-col gap-5 px-4 pb-4;
+	}
+
+	.panel-scroll {
+		@apply min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-2;
+	}
+
+	.food-list {
+		@apply flex flex-col gap-3;
+	}
+
+	.compact-card {
+		@apply py-3;
+	}
+
+	.compact-food-header {
+		@apply items-center;
+	}
+
+	.compact-food-header [data-slot="card-title"] {
+		@apply text-xl;
+	}
+
+	.food-title-input {
+		@apply h-auto rounded-none border-0 bg-transparent px-0 py-0 text-xl shadow-none;
+	}
+
+	.food-title-input:focus-visible {
+		@apply ring-0;
+	}
+
+	.food-title-input::placeholder {
+		@apply text-foreground/55;
+	}
+
+	.food-title-display {
+		@apply inline-flex items-center gap-2 rounded-md px-0 py-0 text-left text-xl transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40;
+	}
+
+	.compact-food-body {
+		@apply flex flex-col gap-4 px-4;
+	}
+
+	.compact-food-grid {
+		@apply grid gap-3 md:grid-cols-2;
+	}
+
+	.estimate-row {
+		@apply flex gap-2;
+	}
+
+	.estimate-unit {
+		@apply w-28 shrink-0;
+	}
+
+	.mode-card {
+		@apply h-full;
+	}
+
+	.mode-content {
+		@apply grid gap-3 px-4 pb-4;
+	}
+
+	.simple-grid,
+	.planner-grid {
+		grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+	}
+
+	.planner-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.mode-left,
+	.mode-right {
+		@apply grid gap-3;
+		grid-template-rows: minmax(0, 1fr);
+	}
+
+	.editor-stack {
+		@apply mt-3 flex flex-col gap-3;
+	}
+
+	.summary-grid {
+		@apply grid gap-3 md:grid-cols-3;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.simple-table-layout {
+		@apply grid min-h-0 gap-3;
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+
+	.simple-table-shell {
+		@apply min-h-0 overflow-auto;
+	}
+
+	.simple-table-shell [data-slot="table"] {
+		@apply text-lg;
+	}
+
+	.simple-table-shell [data-slot="table-head"] {
+		@apply h-12 px-3 text-[0.82rem];
+	}
+
+	.simple-table-shell [data-slot="table-cell"] {
+		@apply px-3 py-3 align-middle;
+	}
+
+	.table-food-cell {
+		@apply min-w-40;
+	}
+
+	.table-food-name {
+		@apply text-xl leading-tight;
+		font-family: var(--font-heading);
+	}
+
+	.table-food-meta {
+		@apply mt-1 text-sm font-semibold text-muted-foreground;
+	}
+
+	.table-control[data-slot="input"],
+	.table-select[data-slot="select-trigger"] {
+		@apply h-12 min-w-28 text-lg;
+	}
+
+	.table-calories-cell {
+		@apply whitespace-nowrap text-lg font-semibold;
+	}
+
+	.table-amount-cell {
+		@apply flex items-center gap-2;
+	}
+
+	.table-unit-label {
+		@apply whitespace-nowrap text-base font-semibold text-muted-foreground;
+	}
+
+	.planner-shell {
+		@apply flex min-h-0 flex-col gap-3;
+	}
+
+	.planner-steps {
+		@apply grid gap-3;
+		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	}
+
+	.planner-step-card {
+		@apply min-h-0;
+	}
+
+	.planner-step-header {
+		@apply flex items-start justify-between gap-2 px-3 py-2;
+	}
+
+	.planner-step-header [data-slot="card-title"] {
+		@apply text-base leading-tight;
+	}
+
+	.planner-step-body {
+		@apply px-3 pb-3;
+	}
+
+	.planner-step-fields {
+		@apply flex flex-col gap-1.5;
+	}
+
+	.planner-inline-field {
+		@apply grid gap-1.5;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.planner-inline-label {
+		@apply text-[0.72rem] leading-tight font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+		overflow-wrap: anywhere;
+	}
+
+	.planner-inline-field [data-slot="input"] {
+		@apply h-8 px-2 text-sm;
+	}
+
+	.planner-days-control {
+		@apply flex items-center gap-2;
+	}
+
+	.planner-days-label {
+		@apply whitespace-nowrap text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+	}
+
+	.planner-days-input[data-slot="input"] {
+		@apply w-16;
+	}
+
+	.planner-results {
+		@apply grid min-h-0 gap-2;
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+
+	.planner-results-header {
+		@apply flex items-end justify-between gap-3 px-1;
+	}
+
+	.planner-results-title {
+		@apply block text-lg leading-none;
+		font-family: var(--font-heading);
+	}
+
+	.planner-table-shell {
+		@apply min-h-0 overflow-auto;
+	}
+
+	.planner-table-shell [data-slot="table"] {
+		@apply text-[0.8125rem];
+	}
+
+	.planner-table-shell [data-slot="table-head"] {
+		@apply h-9 px-2 text-[0.68rem];
+	}
+
+	.planner-table-shell [data-slot="table-cell"] {
+		@apply px-2 py-1.5 align-top;
+	}
+
+	.planner-serving {
+		@apply flex flex-wrap items-baseline gap-x-1.5 gap-y-0 leading-tight;
+	}
+
+	.planner-serving-amount {
+		@apply font-semibold;
+	}
+
+	.planner-serving-meta {
+		@apply text-xs text-muted-foreground;
+	}
+
+	.planner-total {
+		@apply whitespace-nowrap font-semibold;
+	}
+
+	.summary-block {
+		@apply min-w-0 flex flex-col gap-1 rounded-md border-2 border-foreground p-4;
+		box-shadow: 3px 3px 0 0 var(--color-foreground);
+	}
+
+	.summary-block-a {
+		background: color-mix(in srgb, var(--primary) 36%, white);
+	}
+
+	.summary-block-b {
+		background: color-mix(in srgb, var(--secondary) 34%, white);
+	}
+
+	.summary-block-c {
+		background: color-mix(in srgb, var(--accent) 28%, white);
+	}
+
+	.summary-label {
+		@apply text-[0.7rem] leading-tight font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+		overflow-wrap: anywhere;
+	}
+
+	.summary-value,
+	.solved-value {
+		@apply min-w-0 text-[1.9rem] leading-tight;
+		font-family: var(--font-heading);
+		overflow-wrap: anywhere;
+	}
+
+	.solved-block {
+		@apply grid gap-4;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.solved-block > div {
+		@apply min-w-0;
+	}
+
+	.table-shell {
+		@apply rounded-md border-2 border-foreground bg-card px-0 pb-0;
+		box-shadow: 3px 3px 0 0 var(--color-foreground);
+	}
+
+	.compact-alert {
+		@apply text-base;
+	}
+
+	.planner-actions,
+	.phase-actions {
+		@apply flex flex-wrap items-center justify-end gap-2;
+	}
+
+	.phase-grid {
+		@apply grid gap-3;
+	}
+
+	@media (max-width: 1279px) {
+		.app-shell {
+			height: auto;
+			min-height: auto;
+			overflow: visible;
+		}
+
+		.app-layout {
+			height: auto;
+			min-height: auto;
+		}
+
+		.dashboard-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.simple-grid,
+		.planner-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.panel-scroll,
+		.mode-left,
+		.mode-right {
+			overflow: visible;
+		}
+
+		.planner-shell {
+			grid-template-rows: auto;
+		}
+
+		.planner-steps,
+		.planner-step-body {
+			grid-template-columns: 1fr;
+		}
+	}
 }
