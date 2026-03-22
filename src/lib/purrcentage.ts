@@ -1,11 +1,13 @@
 export type FoodUnit = "cup" | "can";
 export type WeightUnit = "lb" | "kg";
+export type CupAmountDisplay = "cups" | "tablespoons";
 
 export type FoodEntry = {
 	id: string;
 	name: string;
 	unitType: FoodUnit;
 	caloriesPerUnit: number;
+	enabled: boolean;
 };
 
 export type FoodAmountInput = {
@@ -75,6 +77,10 @@ function sanitizeNumber(value: number, fallback = 0) {
 	return Number.isFinite(value) ? value : fallback;
 }
 
+function sanitizeWholeNumber(value: number, fallback = 0, min = 0) {
+	return Math.max(min, Math.floor(sanitizeNumber(value, fallback)));
+}
+
 function clampMin(value: number, min = 0) {
 	return Math.max(min, sanitizeNumber(value));
 }
@@ -93,9 +99,17 @@ export function formatUnitAmount(value: number, unitType: FoodUnit) {
 	return `${rounded} ${pluralize(rounded, unitType, `${unitType}s`)}`;
 }
 
-export function formatCupAmount(cups: number) {
+export function formatCupAmount(
+	cups: number,
+	display: CupAmountDisplay = "cups",
+) {
 	const roundedCups = roundTo(cups, 2);
 	const tablespoons = roundTo(cups * CUP_TO_TABLESPOONS, 1);
+
+	if (display === "tablespoons") {
+		return `${tablespoons} tbsp`;
+	}
+
 	return `${roundedCups} ${pluralize(roundedCups, "cup", "cups")} • ${tablespoons} tbsp`;
 }
 
@@ -173,12 +187,14 @@ export function createStarterFoods(): FoodEntry[] {
 			name: "Current food",
 			unitType: "cup",
 			caloriesPerUnit: 400,
+			enabled: true,
 		},
 		{
 			id: "food-new",
 			name: "New food",
 			unitType: "can",
 			caloriesPerUnit: 85,
+			enabled: true,
 		},
 	];
 }
@@ -189,6 +205,7 @@ export function createBlankFood(index: number): FoodEntry {
 		name: `Food ${index}`,
 		unitType: index % 2 === 0 ? "cup" : "can",
 		caloriesPerUnit: index % 2 === 0 ? 360 : 90,
+		enabled: true,
 	};
 }
 
@@ -306,6 +323,103 @@ export function rebalanceTransitionPhases(
 		...phase,
 		percentages: buildGradualPhasePercentages(foods, index, current.length),
 	}));
+}
+
+function phaseMatchesScaledPercentages(
+	current: TransitionPhase,
+	scaled: TransitionPhase,
+	foods: FoodEntry[],
+) {
+	return foods.every(
+		(food) =>
+			roundTo(clampMin(current.percentages[food.id] ?? 0), 1) ===
+			roundTo(clampMin(scaled.percentages[food.id] ?? 0), 1),
+	);
+}
+
+export function hasCustomTransitionPhases(
+	current: TransitionPhase[],
+	foods: FoodEntry[],
+) {
+	const scaled = rebalanceTransitionPhases(current, foods);
+
+	return current.some((phase, index) =>
+		!phaseMatchesScaledPercentages(phase, scaled[index], foods),
+	);
+}
+
+export function addTransitionPhase(
+	current: TransitionPhase[],
+	foods: FoodEntry[],
+	autoScale: boolean,
+) {
+	const next = [...current, createTransitionPhase(foods)];
+
+	return autoScale ? rebalanceTransitionPhases(next, foods) : next;
+}
+
+export function removeTransitionPhase(
+	current: TransitionPhase[],
+	phaseId: string,
+	foods: FoodEntry[],
+	autoScale: boolean,
+) {
+	const remaining = current.filter((phase) => phase.id !== phaseId);
+
+	if (remaining.length === 0 || remaining.length === current.length) {
+		return current;
+	}
+
+	return autoScale ? rebalanceTransitionPhases(remaining, foods) : remaining;
+}
+
+export function normalizePhasePercentagesForFoods(
+	phase: TransitionPhase,
+	foods: FoodEntry[],
+): TransitionPhase {
+	const enabledFoods = foods.filter((food) => food.enabled);
+	const percentages = Object.fromEntries(foods.map((food) => [food.id, 0]));
+
+	if (enabledFoods.length === 0) {
+		return {
+			...phase,
+			percentages,
+		};
+	}
+
+	const enabledValues = enabledFoods.map((food) => ({
+		foodId: food.id,
+		value: clampMin(phase.percentages[food.id] ?? 0),
+	}));
+	const totalEnabled = enabledValues.reduce(
+		(total, entry) => total + entry.value,
+		0,
+	);
+
+	if (totalEnabled <= 0) {
+		percentages[enabledFoods[0].id] = 100;
+		return {
+			...phase,
+			percentages,
+		};
+	}
+
+	let assignedTotal = 0;
+
+	enabledValues.forEach((entry, index) => {
+		const isLastEntry = index === enabledValues.length - 1;
+		const nextValue = isLastEntry
+			? roundTo(100 - assignedTotal, 1)
+			: roundTo((entry.value / totalEnabled) * 100, 1);
+
+		percentages[entry.foodId] = nextValue;
+		assignedTotal += nextValue;
+	});
+
+	return {
+		...phase,
+		percentages,
+	};
 }
 
 export function formatTransitionRangeLabel(
@@ -538,11 +652,15 @@ export function estimateDailyCalories(args: {
 	weight: number;
 	weightUnit: WeightUnit;
 	ageYears: number;
+	ageMonths: number;
 }): CalorieEstimateResult {
 	const weight = clampMin(args.weight);
-	const ageYears = sanitizeNumber(args.ageYears, 0);
+	const ageYears = sanitizeWholeNumber(args.ageYears, 0);
+	const ageMonths = Math.min(11, sanitizeWholeNumber(args.ageMonths, 0));
+	const totalAgeMonths = ageYears * 12 + ageMonths;
+	const totalAgeYears = ageYears + ageMonths / 12;
 
-	if (weight <= 0 || ageYears < 0) {
+	if (weight <= 0) {
 		return {
 			status: "invalid",
 			calories: null,
@@ -554,17 +672,26 @@ export function estimateDailyCalories(args: {
 	const kilograms = toKilograms(weight, args.weightUnit);
 	const rer = roundTo(30 * kilograms + 70, 0);
 
-	if (ageYears < 1) {
+	if (totalAgeYears < 1) {
+		const kittenFactor =
+			totalAgeMonths < 4 ? 2.5 : totalAgeMonths < 6 ? 2 : 1.5;
+		const kittenCalories = roundTo(rer * kittenFactor, 0);
+		const kittenBand =
+			totalAgeMonths < 4
+				? "0-4 months"
+				: totalAgeMonths < 6
+					? "4-6 months"
+					: "6-12 months";
+
 		return {
 			status: "caution",
-			calories: null,
-			message:
-				"Kittens need age-specific feeding guidance, so use your vet or the food label instead of a flat estimate.",
+			calories: kittenCalories,
+			message: `Kitten starter estimate using ${kittenFactor}x RER for ${kittenBand}. Kitten needs can vary more, so adjust with growth, body condition, and your vet's guidance.`,
 			ageBand: "kitten",
 		};
 	}
 
-	if (ageYears > 10) {
+	if (totalAgeYears > 10) {
 		return {
 			status: "caution",
 			calories: rer,

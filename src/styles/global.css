@@ -192,11 +192,23 @@
 	}
 
 	.mode-bar {
-		@apply flex items-center justify-start;
+		@apply flex flex-wrap items-center justify-between gap-3;
 	}
 
 	.mode-tabs {
 		@apply w-full md:w-fit;
+	}
+
+	.display-unit-control {
+		@apply flex items-center gap-2;
+	}
+
+	.display-unit-label {
+		@apply whitespace-nowrap text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+	}
+
+	.display-unit-select {
+		@apply w-28;
 	}
 
 	.dashboard-grid {
@@ -303,7 +315,7 @@
 	}
 
 	.panel-body {
-		@apply flex flex-col gap-5 px-4 pb-4;
+		@apply flex min-h-0 flex-col gap-5 overflow-y-auto overflow-x-hidden px-4 pb-4;
 	}
 
 	.panel-scroll {
@@ -320,6 +332,14 @@
 
 	.compact-food-header {
 		@apply items-center;
+	}
+
+	.food-card-hidden {
+		@apply opacity-70;
+	}
+
+	.food-card-actions {
+		@apply flex items-center gap-2;
 	}
 
 	.compact-food-header [data-slot="card-title"] {
@@ -346,12 +366,24 @@
 		@apply flex flex-col gap-4 px-4;
 	}
 
+	.food-visibility-note {
+		@apply text-sm font-semibold text-muted-foreground;
+	}
+
 	.compact-food-grid {
 		@apply grid gap-3 md:grid-cols-2;
 	}
 
 	.estimate-row {
 		@apply flex gap-2;
+	}
+
+	.estimate-subfield {
+		@apply flex flex-1 flex-col gap-1;
+	}
+
+	.estimate-subfield-label {
+		@apply text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
 	}
 
 	.estimate-unit {
@@ -446,42 +478,49 @@
 	}
 
 	.planner-steps {
-		@apply grid gap-3;
-		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-	}
-
-	.planner-step-card {
 		@apply min-h-0;
 	}
 
-	.planner-step-header {
-		@apply flex items-start justify-between gap-2 px-3 py-2;
+	.planner-editor-toolbar {
+		@apply mb-2 flex items-center justify-between gap-3 px-1;
 	}
 
-	.planner-step-header [data-slot="card-title"] {
-		@apply text-base leading-tight;
+	.planner-editor-shell {
+		@apply min-h-0 overflow-auto;
 	}
 
-	.planner-step-body {
-		@apply px-3 pb-3;
+	.planner-editor-table {
+		min-width: max-content;
 	}
 
-	.planner-step-fields {
-		@apply flex flex-col gap-1.5;
+	.planner-editor-shell [data-slot="table-head"] {
+		@apply h-8 px-2 text-[0.66rem];
 	}
 
-	.planner-inline-field {
-		@apply grid gap-1.5;
-		grid-template-columns: minmax(0, 1fr);
+	.planner-editor-shell [data-slot="table-cell"] {
+		@apply px-2 py-1 align-middle;
 	}
 
-	.planner-inline-label {
-		@apply text-[0.72rem] leading-tight font-semibold uppercase tracking-[0.06em] text-muted-foreground;
-		overflow-wrap: anywhere;
+	.planner-phase-label {
+		@apply min-w-28 whitespace-nowrap py-1 text-sm font-semibold;
+		font-family: var(--font-heading);
 	}
 
-	.planner-inline-field [data-slot="input"] {
-		@apply h-8 px-2 text-sm;
+	.planner-editor-cell {
+		@apply min-w-28;
+	}
+
+	.planner-phase-input[data-slot="input"] {
+		@apply h-8 min-w-24 px-2 text-right text-sm;
+	}
+
+	.planner-editor-actions-head,
+	.planner-editor-actions-cell {
+		@apply w-14 text-right;
+	}
+
+	.planner-editor-actions-cell [data-slot="button"] {
+		@apply h-8 min-w-8 px-2;
 	}
 
 	.planner-days-control {
@@ -629,9 +668,8 @@
 			grid-template-rows: auto;
 		}
 
-		.planner-steps,
-		.planner-step-body {
-			grid-template-columns: 1fr;
+		.planner-editor-cell {
+			min-width: 9rem;
 		}
 	}
 }

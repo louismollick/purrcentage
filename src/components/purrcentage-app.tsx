@@ -2,6 +2,8 @@ import {
 	Calculator,
 	CalendarRange,
 	Cat,
+	Eye,
+	EyeOff,
 	Info,
 	Pencil,
 	Plus,
@@ -53,28 +55,36 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+	type AppTab,
+	loadPersistedAppState,
+	PERSISTED_APP_STATE_VERSION,
+	savePersistedAppState,
+} from "@/lib/persistence";
+import {
+	addTransitionPhase,
 	buildDefaultTransitionPhases,
+	type CupAmountDisplay,
 	calculatePercentageForServing,
 	calculateServingForPercentage,
 	calculateSimplePlan,
 	calculateTransitionPlan,
 	createBlankFood,
-	createSimpleInputs,
-	createStarterFoods,
-	createTransitionPhase,
 	estimateDailyCalories,
+	hasCustomTransitionPhases,
 	type FoodEntry,
 	type FoodUnit,
+	formatCupAmount,
 	formatTransitionRangeLabel,
 	formatUnitAmount,
+	normalizePhasePercentagesForFoods,
 	rebalanceTransitionPhases,
+	removeTransitionPhase,
 	syncSimpleInputs,
 	syncTransitionPhases,
 	type TransitionPhase,
 	type WeightUnit,
 } from "@/lib/purrcentage";
-
-const initialFoods = createStarterFoods();
+import { cn } from "@/lib/utils";
 
 function parseNumber(value: string) {
 	if (!value) {
@@ -83,6 +93,10 @@ function parseNumber(value: string) {
 
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseWholeNumber(value: string) {
+	return Math.max(0, Math.floor(parseNumber(value)));
 }
 
 function formatCalories(value: number) {
@@ -97,33 +111,84 @@ function formatEditableNumber(value: number, digits = 2) {
 	return Number.isFinite(value) ? value.toFixed(digits) : "0";
 }
 
+function getDisplayedServingAmount(
+	food: Pick<FoodEntry, "unitType">,
+	servingAmount: number,
+	cupAmountDisplay: CupAmountDisplay,
+) {
+	if (food.unitType === "cup" && cupAmountDisplay === "tablespoons") {
+		return servingAmount * 16;
+	}
+
+	return servingAmount;
+}
+
+function parseDisplayedServingAmount(
+	food: Pick<FoodEntry, "unitType">,
+	displayAmount: number,
+	cupAmountDisplay: CupAmountDisplay,
+) {
+	if (food.unitType === "cup" && cupAmountDisplay === "tablespoons") {
+		return displayAmount / 16;
+	}
+
+	return displayAmount;
+}
+
+function getServingUnitLabel(
+	food: Pick<FoodEntry, "unitType">,
+	cupAmountDisplay: CupAmountDisplay,
+) {
+	if (food.unitType === "cup" && cupAmountDisplay === "tablespoons") {
+		return "tbsp";
+	}
+
+	return food.unitType;
+}
+
+function formatServingAmountForDisplay(
+	food: Pick<FoodEntry, "unitType">,
+	servingAmount: number,
+	cupAmountDisplay: CupAmountDisplay,
+) {
+	return food.unitType === "cup"
+		? formatCupAmount(servingAmount, cupAmountDisplay)
+		: formatUnitAmount(servingAmount, food.unitType);
+}
+
 export default function PurrcentageApp() {
-	const [goalCalories, setGoalCalories] = useState(300);
-	const [foods, setFoods] = useState<FoodEntry[]>(initialFoods);
+	const [initialState] = useState(() => loadPersistedAppState());
+	const [goalCalories, setGoalCalories] = useState(initialState.goalCalories);
+	const [foods, setFoods] = useState<FoodEntry[]>(initialState.foods);
 	const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
-	const [simpleInputs, setSimpleInputs] = useState(() =>
-		createSimpleInputs(initialFoods),
-	);
+	const [simpleInputs, setSimpleInputs] = useState(initialState.simpleInputs);
 	const [flexibleFoodId, setFlexibleFoodId] = useState<string>(
-		initialFoods[1]?.id ?? initialFoods[0]?.id ?? "",
+		initialState.flexibleFoodId,
 	);
-	const [phases, setPhases] = useState<TransitionPhase[]>(() =>
-		buildDefaultTransitionPhases(initialFoods),
+	const [phases, setPhases] = useState<TransitionPhase[]>(initialState.phases);
+	const [daysPerPhase, setDaysPerPhase] = useState(initialState.daysPerPhase);
+	const [weight, setWeight] = useState(initialState.weight);
+	const [weightUnit, setWeightUnit] = useState<WeightUnit>(
+		initialState.weightUnit,
 	);
-	const [daysPerPhase, setDaysPerPhase] = useState(2);
-	const [weight, setWeight] = useState(10);
-	const [weightUnit, setWeightUnit] = useState<WeightUnit>("lb");
-	const [ageYears, setAgeYears] = useState(3);
+	const [ageYears, setAgeYears] = useState(initialState.ageYears);
+	const [ageMonths, setAgeMonths] = useState(initialState.ageMonths);
+	const [activeTab, setActiveTab] = useState<AppTab>(initialState.activeTab);
+	const [cupAmountDisplay, setCupAmountDisplay] = useState<CupAmountDisplay>(
+		initialState.cupAmountDisplay,
+	);
+	const [autoScale, setAutoScale] = useState(initialState.autoScale);
 
 	useEffect(() => {
+		const enabledFoods = foods.filter((food) => food.enabled);
 		setSimpleInputs((current) => syncSimpleInputs(current, foods));
 		setPhases((current) => syncTransitionPhases(current, foods));
 		setFlexibleFoodId((current) => {
-			if (foods.some((food) => food.id === current)) {
+			if (enabledFoods.some((food) => food.id === current)) {
 				return current;
 			}
 
-			return foods[0]?.id ?? "";
+			return enabledFoods[0]?.id ?? "";
 		});
 	}, [foods]);
 
@@ -139,15 +204,54 @@ export default function PurrcentageApp() {
 		input?.select();
 	}, [editingFoodId]);
 
+	useEffect(() => {
+		const timeoutId = window.setTimeout(() => {
+			savePersistedAppState({
+				version: PERSISTED_APP_STATE_VERSION,
+				goalCalories,
+				foods,
+				simpleInputs,
+				flexibleFoodId,
+				phases,
+				daysPerPhase,
+				weight,
+				weightUnit,
+				ageYears,
+				ageMonths,
+				activeTab,
+				cupAmountDisplay,
+				autoScale,
+			});
+		}, 250);
+
+		return () => window.clearTimeout(timeoutId);
+	}, [
+		activeTab,
+		ageMonths,
+		ageYears,
+		daysPerPhase,
+		flexibleFoodId,
+		foods,
+		goalCalories,
+		phases,
+		simpleInputs,
+		weight,
+		weightUnit,
+		cupAmountDisplay,
+		autoScale,
+	]);
+
+	const activeFoods = foods.filter((food) => food.enabled);
+
 	const simplePlan = calculateSimplePlan({
 		goalCalories,
-		foods,
+		foods: activeFoods,
 		inputs: simpleInputs,
 		flexibleFoodId,
 	});
 	const transitionPlan = calculateTransitionPlan({
 		goalCalories,
-		foods,
+		foods: activeFoods,
 		phases,
 		daysPerPhase,
 	});
@@ -155,6 +259,7 @@ export default function PurrcentageApp() {
 		weight,
 		weightUnit,
 		ageYears,
+		ageMonths,
 	});
 
 	function updateFood(foodId: string, patch: Partial<FoodEntry>) {
@@ -176,6 +281,21 @@ export default function PurrcentageApp() {
 	function addFood() {
 		startTransition(() => {
 			setFoods((current) => [...current, createBlankFood(current.length + 1)]);
+		});
+	}
+
+	function toggleFoodEnabled(foodId: string) {
+		const nextFoods = foods.map((food) =>
+			food.id === foodId ? { ...food, enabled: !food.enabled } : food,
+		);
+
+		startTransition(() => {
+			setFoods(nextFoods);
+			setPhases((current) =>
+				current.map((phase) =>
+					normalizePhasePercentagesForFoods(phase, nextFoods),
+				),
+			);
 		});
 	}
 
@@ -223,13 +343,14 @@ export default function PurrcentageApp() {
 	function resetPlanner() {
 		startTransition(() => {
 			setDaysPerPhase(2);
-			setPhases(buildDefaultTransitionPhases(foods));
+			setAutoScale(true);
+			setPhases(buildDefaultTransitionPhases(activeFoods));
 		});
 	}
 
 	function addPhase() {
 		startTransition(() => {
-			setPhases((current) => [...current, createTransitionPhase(foods)]);
+			setPhases((current) => addTransitionPhase(current, activeFoods, autoScale));
 		});
 	}
 
@@ -238,13 +359,32 @@ export default function PurrcentageApp() {
 			return;
 		}
 
-		setPhases((current) => current.filter((phase) => phase.id !== phaseId));
+		setPhases((current) =>
+			removeTransitionPhase(current, phaseId, activeFoods, autoScale),
+		);
 	}
 
-	function rebalancePlanner() {
-		startTransition(() => {
-			setPhases((current) => rebalanceTransitionPhases(current, foods));
-		});
+	function toggleAutoScale() {
+		if (!autoScale) {
+			const hasCustomPhases = hasCustomTransitionPhases(phases, activeFoods);
+
+			if (
+				hasCustomPhases &&
+				!window.confirm(
+					"Turning on Auto scale will replace your manual planner percentages. Continue?",
+				)
+			) {
+				return;
+			}
+
+			startTransition(() => {
+				setAutoScale(true);
+				setPhases((current) => rebalanceTransitionPhases(current, activeFoods));
+			});
+			return;
+		}
+
+		setAutoScale(false);
 	}
 
 	function updateFoodMode(foodId: string, mode: "fixed" | "flexible") {
@@ -253,11 +393,11 @@ export default function PurrcentageApp() {
 			return;
 		}
 
-		if (foods.length <= 1 || flexibleFoodId !== foodId) {
+		if (activeFoods.length <= 1 || flexibleFoodId !== foodId) {
 			return;
 		}
 
-		const nextFood = foods.find((food) => food.id !== foodId);
+		const nextFood = activeFoods.find((food) => food.id !== foodId);
 		if (nextFood) {
 			setFlexibleFoodId(nextFood.id);
 		}
@@ -282,7 +422,11 @@ export default function PurrcentageApp() {
 				</div>
 			</header>
 
-			<Tabs defaultValue="simple" className="app-tabs">
+			<Tabs
+				value={activeTab}
+				onValueChange={(value) => setActiveTab(value as AppTab)}
+				className="app-tabs"
+			>
 				<div className="mode-bar">
 					<TabsList className="mode-tabs">
 						<TabsTrigger value="simple">
@@ -294,6 +438,29 @@ export default function PurrcentageApp() {
 							Transition planner
 						</TabsTrigger>
 					</TabsList>
+					<label className="display-unit-control" htmlFor="cup-amount-display">
+						<span className="display-unit-label">Cup results</span>
+						<Select
+							value={cupAmountDisplay}
+							onValueChange={(value) =>
+								setCupAmountDisplay(value as CupAmountDisplay)
+							}
+						>
+							<SelectTrigger
+								id="cup-amount-display"
+								className="display-unit-select"
+							>
+								<SelectValue placeholder="Display" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectGroup>
+									<SelectLabel>Cup results</SelectLabel>
+									<SelectItem value="cups">cups</SelectItem>
+									<SelectItem value="tablespoons">tbsp</SelectItem>
+								</SelectGroup>
+							</SelectContent>
+						</Select>
+					</label>
 				</div>
 
 				<div className="dashboard-grid">
@@ -360,18 +527,50 @@ export default function PurrcentageApp() {
 												</FieldContent>
 											</Field>
 											<Field>
-												<FieldLabel htmlFor="cat-age">Age</FieldLabel>
-												<FieldContent>
-													<Input
-														id="cat-age"
-														type="number"
-														min="0"
-														step="0.1"
-														value={ageYears}
-														onChange={(event) =>
-															setAgeYears(parseNumber(event.target.value))
-														}
-													/>
+												<FieldLabel htmlFor="cat-age-years">Age</FieldLabel>
+												<FieldContent className="estimate-row">
+													<div className="estimate-subfield">
+														<span className="estimate-subfield-label">
+															Years
+														</span>
+														<Input
+															id="cat-age-years"
+															type="number"
+															min="0"
+															step="1"
+															aria-label="Age in years"
+															placeholder="0"
+															value={ageYears}
+															onChange={(event) =>
+																setAgeYears(
+																	parseWholeNumber(event.target.value),
+																)
+															}
+														/>
+													</div>
+													<div className="estimate-subfield">
+														<span className="estimate-subfield-label">
+															Months
+														</span>
+														<Input
+															id="cat-age-months"
+															type="number"
+															min="0"
+															max="11"
+															step="1"
+															aria-label="Additional months"
+															placeholder="0"
+															value={ageMonths}
+															onChange={(event) =>
+																setAgeMonths(
+																	Math.min(
+																		11,
+																		parseWholeNumber(event.target.value),
+																	),
+																)
+															}
+														/>
+													</div>
 												</FieldContent>
 											</Field>
 										</FieldGroup>
@@ -424,7 +623,10 @@ export default function PurrcentageApp() {
 								<Card
 									key={food.id}
 									size="sm"
-									className="food-card compact-card"
+									className={cn(
+										"food-card compact-card",
+										!food.enabled && "food-card-hidden",
+									)}
 								>
 									<CardHeader className="compact-header compact-food-header">
 										<CardTitle>
@@ -459,7 +661,20 @@ export default function PurrcentageApp() {
 												</button>
 											)}
 										</CardTitle>
-										<CardAction>
+										<CardAction className="food-card-actions">
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon-sm"
+												aria-label={
+													food.enabled
+														? `Hide ${food.name || `Food ${index + 1}`}`
+														: `Show ${food.name || `Food ${index + 1}`}`
+												}
+												onClick={() => toggleFoodEnabled(food.id)}
+											>
+												{food.enabled ? <Eye /> : <EyeOff />}
+											</Button>
 											<Button
 												type="button"
 												variant="outline"
@@ -473,6 +688,11 @@ export default function PurrcentageApp() {
 										</CardAction>
 									</CardHeader>
 									<CardContent className="compact-food-body">
+										{!food.enabled ? (
+											<div className="food-visibility-note">
+												Hidden from calculations and planner results
+											</div>
+										) : null}
 										<div className="compact-food-grid">
 											<Field>
 												<FieldLabel>Unit</FieldLabel>
@@ -560,7 +780,7 @@ export default function PurrcentageApp() {
 												</TableRow>
 											</TableHeader>
 											<TableBody>
-												{foods.map((food) => {
+												{activeFoods.map((food) => {
 													const isFlexible = food.id === flexibleFoodId;
 													const result =
 														simplePlan.foods.find(
@@ -568,6 +788,18 @@ export default function PurrcentageApp() {
 														) ?? null;
 													const currentServing =
 														simpleInputs[food.id]?.servingAmount ?? 0;
+													const currentServingDisplay =
+														getDisplayedServingAmount(
+															food,
+															currentServing,
+															cupAmountDisplay,
+														);
+													const resultServingDisplay =
+														getDisplayedServingAmount(
+															food,
+															result?.servingAmount ?? 0,
+															cupAmountDisplay,
+														);
 													const currentPercentage =
 														calculatePercentageForServing(
 															goalCalories,
@@ -645,25 +877,46 @@ export default function PurrcentageApp() {
 																		className="table-control"
 																		type="number"
 																		min="0"
-																		step="0.01"
+																		step={
+																			food.unitType === "cup" &&
+																			cupAmountDisplay === "tablespoons"
+																				? "0.1"
+																				: "0.01"
+																		}
 																		value={
 																			isFlexible
 																				? formatEditableNumber(
-																						result?.servingAmount ?? 0,
-																						2,
+																						resultServingDisplay,
+																						food.unitType === "cup" &&
+																							cupAmountDisplay === "tablespoons"
+																							? 1
+																							: 2,
 																					)
-																				: currentServing
+																				: formatEditableNumber(
+																						currentServingDisplay,
+																						food.unitType === "cup" &&
+																							cupAmountDisplay === "tablespoons"
+																							? 1
+																							: 2,
+																					)
 																		}
 																		onChange={(event) =>
 																			updateSimpleServing(
 																				food.id,
-																				parseNumber(event.target.value),
+																				parseDisplayedServingAmount(
+																					food,
+																					parseNumber(event.target.value),
+																					cupAmountDisplay,
+																				),
 																			)
 																		}
 																		disabled={isFlexible}
 																	/>
 																	<span className="table-unit-label">
-																		{food.unitType}
+																		{getServingUnitLabel(
+																			food,
+																			cupAmountDisplay,
+																		)}
 																	</span>
 																</div>
 															</TableCell>
@@ -708,14 +961,6 @@ export default function PurrcentageApp() {
 									<Button
 										type="button"
 										variant="outline"
-										onClick={rebalancePlanner}
-									>
-										<Sparkles data-icon="inline-start" />
-										Auto adjust
-									</Button>
-									<Button
-										type="button"
-										variant="outline"
 										onClick={resetPlanner}
 									>
 										<RefreshCcw data-icon="inline-start" />
@@ -740,64 +985,88 @@ export default function PurrcentageApp() {
 									) : null}
 
 									<div className="planner-steps">
-										{phases.map((phase, index) => {
-											const phaseLabel = getPhaseLabel(index);
+										<div className="planner-editor-toolbar">
+											<div>
+												<span className="planner-days-label">
+													Planner scaling
+												</span>
+											</div>
+											<Button
+												type="button"
+												variant={autoScale ? "secondary" : "outline"}
+												aria-pressed={autoScale}
+												onClick={toggleAutoScale}
+											>
+												<Sparkles data-icon="inline-start" />
+												Auto scale {autoScale ? "On" : "Off"}
+											</Button>
+										</div>
+										<div className="table-shell planner-editor-shell">
+											<Table className="planner-editor-table">
+												<TableHeader>
+													<TableRow>
+														<TableHead>Day range</TableHead>
+														{activeFoods.map((food) => (
+															<TableHead key={food.id}>{food.name}</TableHead>
+														))}
+														<TableHead className="planner-editor-actions-head">
+															<span className="sr-only">Actions</span>
+														</TableHead>
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{phases.map((phase, index) => {
+														const phaseLabel = getPhaseLabel(index);
 
-											return (
-												<Card
-													key={phase.id}
-													size="sm"
-													className="compact-card planner-step-card"
-												>
-													<CardHeader className="planner-step-header">
-														<CardTitle>{phaseLabel}</CardTitle>
-														<CardAction className="phase-actions">
-															<Button
-																type="button"
-																variant="outline"
-																size="sm"
-																aria-label={`Remove ${phaseLabel}`}
-																onClick={() => removePhase(phase.id)}
-																disabled={phases.length === 1}
-															>
-																<Trash2 />
-															</Button>
-														</CardAction>
-													</CardHeader>
-													<CardContent className="planner-step-body">
-														<div className="planner-step-fields">
-															{foods.map((food) => (
-																<label
-																	key={food.id}
-																	className="planner-inline-field"
-																	htmlFor={`phase-${phase.id}-${food.id}`}
-																>
-																	<span className="planner-inline-label">
-																		{food.name}
-																	</span>
-																	<Input
-																		id={`phase-${phase.id}-${food.id}`}
-																		type="number"
-																		min="0"
-																		step="0.1"
-																		value={(
-																			phase.percentages[food.id] ?? 0
-																		).toFixed(1)}
-																		onChange={(event) =>
-																			updatePhasePercentage(
-																				phase.id,
-																				food.id,
-																				parseNumber(event.target.value),
-																			)
-																		}
-																	/>
-																</label>
-															))}
-														</div>
-													</CardContent>
-												</Card>
-											);
-										})}
+														return (
+															<TableRow key={phase.id}>
+																<TableCell className="planner-phase-label">
+																	{phaseLabel}
+																</TableCell>
+																{activeFoods.map((food) => (
+																	<TableCell
+																		key={food.id}
+																		className="planner-editor-cell"
+																	>
+																		<Input
+																			id={`phase-${phase.id}-${food.id}`}
+																			className="planner-phase-input"
+																			type="number"
+																			min="0"
+																			step="0.1"
+																			aria-label={`${phaseLabel} ${food.name}`}
+																			value={(
+																				phase.percentages[food.id] ?? 0
+																			).toFixed(1)}
+																			onChange={(event) =>
+																				updatePhasePercentage(
+																					phase.id,
+																					food.id,
+																					parseNumber(event.target.value),
+																				)
+																			}
+																			disabled={autoScale}
+																		/>
+																	</TableCell>
+																))}
+																<TableCell className="planner-editor-actions-cell">
+																	<Button
+																		type="button"
+																		variant="outline"
+																		size="sm"
+																		aria-label={`Remove ${phaseLabel}`}
+																		onClick={() => removePhase(phase.id)}
+																		disabled={phases.length === 1}
+																	>
+																		<Trash2 />
+																	</Button>
+																</TableCell>
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</Table>
+										</div>
 									</div>
 
 									<div className="planner-results">
@@ -816,7 +1085,7 @@ export default function PurrcentageApp() {
 													<TableRow>
 														<TableHead>Day</TableHead>
 														<TableHead>Range</TableHead>
-														{foods.map((food) => (
+														{activeFoods.map((food) => (
 															<TableHead key={food.id}>{food.name}</TableHead>
 														))}
 														<TableHead>Total</TableHead>
@@ -827,7 +1096,7 @@ export default function PurrcentageApp() {
 														<TableRow key={day.day}>
 															<TableCell>{day.day}</TableCell>
 															<TableCell>{day.phaseLabel}</TableCell>
-															{foods.map((food) => {
+															{activeFoods.map((food) => {
 																const plannedFood =
 																	day.foods.find(
 																		(entry) => entry.foodId === food.id,
@@ -838,9 +1107,10 @@ export default function PurrcentageApp() {
 																		{plannedFood ? (
 																			<div className="planner-serving">
 																				<span className="planner-serving-amount">
-																					{formatUnitAmount(
+																					{formatServingAmountForDisplay(
+																						food,
 																						plannedFood.servingAmount,
-																						plannedFood.unitType,
+																						cupAmountDisplay,
 																					)}
 																				</span>
 																				<span className="planner-serving-meta">

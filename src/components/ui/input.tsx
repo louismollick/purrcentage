@@ -2,15 +2,52 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function isZeroLike(value: React.ComponentProps<"input">["value"]) {
+	if (typeof value === "number") {
+		return value === 0;
+	}
+
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		return trimmed.length > 0 && Number(trimmed) === 0;
+	}
+
+	return false;
+}
+
+function Input({
+	className,
+	type,
+	onFocus,
+	value,
+	...props
+}: React.ComponentProps<"input">) {
+	const handleFocus: React.FocusEventHandler<HTMLInputElement> = (event) => {
+		onFocus?.(event);
+
+		if (
+			event.defaultPrevented ||
+			type !== "number" ||
+			!isZeroLike(value ?? event.currentTarget.value)
+		) {
+			return;
+		}
+
+		window.requestAnimationFrame(() => {
+			event.currentTarget.select();
+		});
+	};
+
 	return (
 		<input
 			type={type}
 			data-slot="input"
+			value={value}
 			className={cn(
 				"h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
 				className,
 			)}
+			onFocus={handleFocus}
 			{...props}
 		/>
 	);
