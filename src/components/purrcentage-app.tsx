@@ -69,13 +69,14 @@ import {
 	calculateSimplePlan,
 	calculateTransitionPlan,
 	createBlankFood,
+	type ExpandedDayPlan,
 	estimateDailyCalories,
-	hasCustomTransitionPhases,
 	type FoodEntry,
 	type FoodUnit,
 	formatCupAmount,
 	formatTransitionRangeLabel,
 	formatUnitAmount,
+	hasCustomTransitionPhases,
 	normalizePhasePercentagesForFoods,
 	rebalanceTransitionPhases,
 	removeTransitionPhase,
@@ -109,6 +110,39 @@ function formatPercent(value: number) {
 
 function formatEditableNumber(value: number, digits = 2) {
 	return Number.isFinite(value) ? value.toFixed(digits) : "0";
+}
+
+function formatDayCount(value: number) {
+	return `${value} ${value === 1 ? "day" : "days"}`;
+}
+
+type TransitionDayGroup = {
+	phaseId: string;
+	phaseLabel: string;
+	dayCount: number;
+	foods: ExpandedDayPlan["foods"];
+	totalCalories: number;
+};
+
+function groupTransitionDays(days: ExpandedDayPlan[]): TransitionDayGroup[] {
+	return days.reduce<TransitionDayGroup[]>((groups, day) => {
+		const current = groups.at(-1);
+
+		if (current && current.phaseId === day.phaseId) {
+			current.dayCount += 1;
+			return groups;
+		}
+
+		groups.push({
+			phaseId: day.phaseId,
+			phaseLabel: day.phaseLabel,
+			dayCount: 1,
+			foods: day.foods,
+			totalCalories: day.totalCalories,
+		});
+
+		return groups;
+	}, []);
 }
 
 function getDisplayedServingAmount(
@@ -242,7 +276,6 @@ export default function PurrcentageApp() {
 	]);
 
 	const activeFoods = foods.filter((food) => food.enabled);
-
 	const simplePlan = calculateSimplePlan({
 		goalCalories,
 		foods: activeFoods,
@@ -255,6 +288,7 @@ export default function PurrcentageApp() {
 		phases,
 		daysPerPhase,
 	});
+	const transitionDayGroups = groupTransitionDays(transitionPlan.days);
 	const calorieEstimate = estimateDailyCalories({
 		weight,
 		weightUnit,
@@ -350,7 +384,9 @@ export default function PurrcentageApp() {
 
 	function addPhase() {
 		startTransition(() => {
-			setPhases((current) => addTransitionPhase(current, activeFoods, autoScale));
+			setPhases((current) =>
+				addTransitionPhase(current, activeFoods, autoScale),
+			);
 		});
 	}
 
@@ -413,6 +449,10 @@ export default function PurrcentageApp() {
 		return formatTransitionRangeLabel(index, daysPerPhase);
 	}
 
+	function getFoodLabel(food: FoodEntry, index: number) {
+		return food.name || `Food ${index + 1}`;
+	}
+
 	return (
 		<div className="app-layout">
 			<header className="top-bar">
@@ -428,12 +468,18 @@ export default function PurrcentageApp() {
 				className="app-tabs"
 			>
 				<div className="mode-bar">
-					<TabsList className="mode-tabs">
-						<TabsTrigger value="simple">
+					<TabsList className="mode-tabs max-[767px]:grid max-[767px]:h-auto max-[767px]:w-full max-[767px]:grid-cols-2 max-[767px]:items-stretch max-[767px]:gap-1 max-[767px]:p-1">
+						<TabsTrigger
+							className="mode-tab-trigger max-[767px]:h-auto max-[767px]:min-h-11 max-[767px]:min-w-0 max-[767px]:w-full max-[767px]:justify-center max-[767px]:gap-1 max-[767px]:px-2 max-[767px]:py-2 max-[767px]:text-center max-[767px]:text-[0.82rem] max-[767px]:leading-tight max-[767px]:whitespace-nowrap"
+							value="simple"
+						>
 							<Calculator data-icon="inline-start" />
 							Simple calculator
 						</TabsTrigger>
-						<TabsTrigger value="planner">
+						<TabsTrigger
+							className="mode-tab-trigger max-[767px]:h-auto max-[767px]:min-h-11 max-[767px]:min-w-0 max-[767px]:w-full max-[767px]:justify-center max-[767px]:gap-1 max-[767px]:px-2 max-[767px]:py-2 max-[767px]:text-center max-[767px]:text-[0.82rem] max-[767px]:leading-tight max-[767px]:whitespace-nowrap"
+							value="planner"
+						>
 							<CalendarRange data-icon="inline-start" />
 							Transition planner
 						</TabsTrigger>
@@ -465,7 +511,7 @@ export default function PurrcentageApp() {
 
 				<div className="dashboard-grid">
 					<Card className="panel-card panel-column">
-						<CardHeader className="compact-header">
+						<CardHeader className="compact-header section-header">
 							<CardTitle>Calorie goal per day</CardTitle>
 						</CardHeader>
 						<CardContent className="panel-body">
@@ -609,9 +655,9 @@ export default function PurrcentageApp() {
 					</Card>
 
 					<Card className="panel-card panel-column">
-						<CardHeader className="compact-header">
+						<CardHeader className="compact-header section-header">
 							<CardTitle>Foods</CardTitle>
-							<CardAction>
+							<CardAction className="section-action">
 								<Button type="button" variant="secondary" onClick={addFood}>
 									<Plus data-icon="inline-start" />
 									Add food
@@ -656,7 +702,7 @@ export default function PurrcentageApp() {
 													className="food-title-display"
 													onClick={() => setEditingFoodId(food.id)}
 												>
-													<span>{food.name || `Food ${index + 1}`}</span>
+													<span>{getFoodLabel(food, index)}</span>
 													<Pencil aria-hidden="true" className="size-4" />
 												</button>
 											)}
@@ -668,8 +714,8 @@ export default function PurrcentageApp() {
 												size="icon-sm"
 												aria-label={
 													food.enabled
-														? `Hide ${food.name || `Food ${index + 1}`}`
-														: `Show ${food.name || `Food ${index + 1}`}`
+														? `Hide ${getFoodLabel(food, index)}`
+														: `Show ${getFoodLabel(food, index)}`
 												}
 												onClick={() => toggleFoodEnabled(food.id)}
 											>
@@ -678,12 +724,12 @@ export default function PurrcentageApp() {
 											<Button
 												type="button"
 												variant="outline"
-												size="sm"
+												size="icon-xs"
+												aria-label={`Remove ${getFoodLabel(food, index)}`}
 												onClick={() => removeFood(food.id)}
 												disabled={foods.length === 1}
 											>
-												<Trash2 data-icon="inline-start" />
-												Remove
+												<Trash2 />
 											</Button>
 										</CardAction>
 									</CardHeader>
@@ -748,7 +794,7 @@ export default function PurrcentageApp() {
 
 					<TabsContent value="simple" className="mode-panel">
 						<Card className="panel-card mode-card">
-							<CardHeader className="compact-header">
+							<CardHeader className="compact-header section-header">
 								<CardTitle>Simple calculator</CardTitle>
 							</CardHeader>
 							<CardContent className="mode-content">
@@ -768,113 +814,146 @@ export default function PurrcentageApp() {
 										</Alert>
 									) : null}
 
-									<div className="table-shell simple-table-shell">
-										<Table>
-											<TableHeader>
-												<TableRow>
-													<TableHead>Food</TableHead>
-													<TableHead>Mode</TableHead>
-													<TableHead>%</TableHead>
-													<TableHead>Calories</TableHead>
-													<TableHead>Amount</TableHead>
-												</TableRow>
-											</TableHeader>
-											<TableBody>
-												{activeFoods.map((food) => {
-													const isFlexible = food.id === flexibleFoodId;
-													const result =
-														simplePlan.foods.find(
-															(entry) => entry.foodId === food.id,
-														) ?? null;
-													const currentServing =
-														simpleInputs[food.id]?.servingAmount ?? 0;
-													const currentServingDisplay =
-														getDisplayedServingAmount(
-															food,
-															currentServing,
-															cupAmountDisplay,
-														);
-													const resultServingDisplay =
-														getDisplayedServingAmount(
-															food,
-															result?.servingAmount ?? 0,
-															cupAmountDisplay,
-														);
-													const currentPercentage =
-														calculatePercentageForServing(
-															goalCalories,
-															currentServing,
-															food.caloriesPerUnit,
-														);
+									<div className="mobile-simple-list md:hidden">
+										{activeFoods.map((food, index) => {
+											const isFlexible = food.id === flexibleFoodId;
+											const result =
+												simplePlan.foods.find(
+													(entry) => entry.foodId === food.id,
+												) ?? null;
+											const currentServing =
+												simpleInputs[food.id]?.servingAmount ?? 0;
+											const currentServingDisplay = getDisplayedServingAmount(
+												food,
+												currentServing,
+												cupAmountDisplay,
+											);
+											const resultServingDisplay = getDisplayedServingAmount(
+												food,
+												result?.servingAmount ?? 0,
+												cupAmountDisplay,
+											);
+											const currentPercentage = calculatePercentageForServing(
+												goalCalories,
+												currentServing,
+												food.caloriesPerUnit,
+											);
 
-													return (
-														<TableRow key={food.id}>
-															<TableCell className="table-food-cell">
-																<div className="table-food-name">
-																	{food.name}
-																</div>
-																<div className="table-food-meta">
-																	{food.caloriesPerUnit} kcal / {food.unitType}
-																</div>
-															</TableCell>
-															<TableCell>
-																<Select
-																	value={isFlexible ? "flexible" : "fixed"}
-																	onValueChange={(value) =>
-																		updateFoodMode(
-																			food.id,
-																			value as "fixed" | "flexible",
-																		)
-																	}
-																>
-																	<SelectTrigger className="table-control table-select">
-																		<SelectValue placeholder="Mode" />
-																	</SelectTrigger>
-																	<SelectContent>
-																		<SelectGroup>
-																			<SelectLabel>Mode</SelectLabel>
-																			<SelectItem value="fixed">
-																				Fixed
-																			</SelectItem>
-																			<SelectItem value="flexible">
-																				Calculated
-																			</SelectItem>
-																		</SelectGroup>
-																	</SelectContent>
-																</Select>
-															</TableCell>
-															<TableCell>
-																<Input
-																	id={`percentage-${food.id}`}
-																	className="table-control"
-																	type="number"
-																	min="0"
-																	step="0.1"
-																	value={
-																		isFlexible
-																			? formatEditableNumber(
-																					result?.percentageOfGoal ?? 0,
-																					1,
-																				)
-																			: currentPercentage.toFixed(1)
-																	}
-																	onChange={(event) =>
-																		updateSimplePercentage(
-																			food,
-																			parseNumber(event.target.value),
-																		)
-																	}
-																	disabled={isFlexible}
-																/>
-															</TableCell>
-															<TableCell className="table-calories-cell">
+											return (
+												<Card
+													key={food.id}
+													size="sm"
+													className="mobile-task-card"
+												>
+													<CardHeader className="compact-header mobile-task-header">
+														<div className="mobile-task-title">
+															<CardTitle>{getFoodLabel(food, index)}</CardTitle>
+															<p className="mobile-task-meta">
+																{food.caloriesPerUnit} kcal / {food.unitType}
+															</p>
+														</div>
+														<div className="mobile-task-summary">
+															<span className="summary-label">Calories</span>
+															<strong className="mobile-task-value">
 																{formatCalories(result?.calories ?? 0)}
-															</TableCell>
-															<TableCell>
-																<div className="table-amount-cell">
+															</strong>
+														</div>
+													</CardHeader>
+													<CardContent className="mobile-task-body">
+														<div className="mobile-field-grid">
+															<Field>
+																<FieldLabel>Mode</FieldLabel>
+																<FieldContent>
+																	<Select
+																		value={isFlexible ? "flexible" : "fixed"}
+																		onValueChange={(value) =>
+																			updateFoodMode(
+																				food.id,
+																				value as "fixed" | "flexible",
+																			)
+																		}
+																	>
+																		<SelectTrigger className="w-full">
+																			<SelectValue placeholder="Mode" />
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectGroup>
+																				<SelectLabel>Mode</SelectLabel>
+																				<SelectItem value="fixed">
+																					Fixed
+																				</SelectItem>
+																				<SelectItem value="flexible">
+																					Calculated
+																				</SelectItem>
+																			</SelectGroup>
+																		</SelectContent>
+																	</Select>
+																</FieldContent>
+															</Field>
+															<div className="mobile-metric-grid">
+																<div className="summary-block summary-block-a mobile-metric-card">
+																	<span className="summary-label">
+																		Target share
+																	</span>
+																	<strong className="mobile-metric-value">
+																		{formatPercent(
+																			result?.percentageOfGoal ??
+																				currentPercentage,
+																		)}
+																	</strong>
+																</div>
+																<div className="summary-block summary-block-b mobile-metric-card">
+																	<span className="summary-label">
+																		Daily amount
+																	</span>
+																	<strong className="mobile-metric-value">
+																		{formatServingAmountForDisplay(
+																			food,
+																			result?.servingAmount ?? currentServing,
+																			cupAmountDisplay,
+																		)}
+																	</strong>
+																</div>
+															</div>
+															<Field>
+																<FieldLabel
+																	htmlFor={`mobile-percentage-${food.id}`}
+																>
+																	Percentage
+																</FieldLabel>
+																<FieldContent>
 																	<Input
-																		id={`serving-${food.id}`}
-																		className="table-control"
+																		id={`mobile-percentage-${food.id}`}
+																		type="number"
+																		min="0"
+																		step="0.1"
+																		value={
+																			isFlexible
+																				? formatEditableNumber(
+																						result?.percentageOfGoal ?? 0,
+																						1,
+																					)
+																				: currentPercentage.toFixed(1)
+																		}
+																		onChange={(event) =>
+																			updateSimplePercentage(
+																				food,
+																				parseNumber(event.target.value),
+																			)
+																		}
+																		disabled={isFlexible}
+																	/>
+																</FieldContent>
+															</Field>
+															<Field>
+																<FieldLabel
+																	htmlFor={`mobile-serving-${food.id}`}
+																>
+																	Amount
+																</FieldLabel>
+																<FieldContent className="mobile-serving-field">
+																	<Input
+																		id={`mobile-serving-${food.id}`}
 																		type="number"
 																		min="0"
 																		step={
@@ -912,19 +991,183 @@ export default function PurrcentageApp() {
 																		}
 																		disabled={isFlexible}
 																	/>
-																	<span className="table-unit-label">
+																	<span className="mobile-serving-unit">
 																		{getServingUnitLabel(
 																			food,
 																			cupAmountDisplay,
 																		)}
 																	</span>
-																</div>
-															</TableCell>
-														</TableRow>
-													);
-												})}
-											</TableBody>
-										</Table>
+																</FieldContent>
+															</Field>
+														</div>
+													</CardContent>
+												</Card>
+											);
+										})}
+									</div>
+
+									<div className="hidden md:block">
+										<div className="table-shell simple-table-shell">
+											<Table>
+												<TableHeader>
+													<TableRow>
+														<TableHead>Food</TableHead>
+														<TableHead>Mode</TableHead>
+														<TableHead>%</TableHead>
+														<TableHead>Calories</TableHead>
+														<TableHead>Amount</TableHead>
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{activeFoods.map((food) => {
+														const isFlexible = food.id === flexibleFoodId;
+														const result =
+															simplePlan.foods.find(
+																(entry) => entry.foodId === food.id,
+															) ?? null;
+														const currentServing =
+															simpleInputs[food.id]?.servingAmount ?? 0;
+														const currentServingDisplay =
+															getDisplayedServingAmount(
+																food,
+																currentServing,
+																cupAmountDisplay,
+															);
+														const resultServingDisplay =
+															getDisplayedServingAmount(
+																food,
+																result?.servingAmount ?? 0,
+																cupAmountDisplay,
+															);
+														const currentPercentage =
+															calculatePercentageForServing(
+																goalCalories,
+																currentServing,
+																food.caloriesPerUnit,
+															);
+
+														return (
+															<TableRow key={food.id}>
+																<TableCell className="table-food-cell">
+																	<div className="table-food-name">
+																		{food.name}
+																	</div>
+																	<div className="table-food-meta">
+																		{food.caloriesPerUnit} kcal /{" "}
+																		{food.unitType}
+																	</div>
+																</TableCell>
+																<TableCell>
+																	<Select
+																		value={isFlexible ? "flexible" : "fixed"}
+																		onValueChange={(value) =>
+																			updateFoodMode(
+																				food.id,
+																				value as "fixed" | "flexible",
+																			)
+																		}
+																	>
+																		<SelectTrigger className="table-control table-select">
+																			<SelectValue placeholder="Mode" />
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectGroup>
+																				<SelectLabel>Mode</SelectLabel>
+																				<SelectItem value="fixed">
+																					Fixed
+																				</SelectItem>
+																				<SelectItem value="flexible">
+																					Calculated
+																				</SelectItem>
+																			</SelectGroup>
+																		</SelectContent>
+																	</Select>
+																</TableCell>
+																<TableCell>
+																	<Input
+																		id={`percentage-${food.id}`}
+																		className="table-control"
+																		type="number"
+																		min="0"
+																		step="0.1"
+																		value={
+																			isFlexible
+																				? formatEditableNumber(
+																						result?.percentageOfGoal ?? 0,
+																						1,
+																					)
+																				: currentPercentage.toFixed(1)
+																		}
+																		onChange={(event) =>
+																			updateSimplePercentage(
+																				food,
+																				parseNumber(event.target.value),
+																			)
+																		}
+																		disabled={isFlexible}
+																	/>
+																</TableCell>
+																<TableCell className="table-calories-cell">
+																	{formatCalories(result?.calories ?? 0)}
+																</TableCell>
+																<TableCell>
+																	<div className="table-amount-cell">
+																		<Input
+																			id={`serving-${food.id}`}
+																			className="table-control"
+																			type="number"
+																			min="0"
+																			step={
+																				food.unitType === "cup" &&
+																				cupAmountDisplay === "tablespoons"
+																					? "0.1"
+																					: "0.01"
+																			}
+																			value={
+																				isFlexible
+																					? formatEditableNumber(
+																							resultServingDisplay,
+																							food.unitType === "cup" &&
+																								cupAmountDisplay ===
+																									"tablespoons"
+																								? 1
+																								: 2,
+																						)
+																					: formatEditableNumber(
+																							currentServingDisplay,
+																							food.unitType === "cup" &&
+																								cupAmountDisplay ===
+																									"tablespoons"
+																								? 1
+																								: 2,
+																						)
+																			}
+																			onChange={(event) =>
+																				updateSimpleServing(
+																					food.id,
+																					parseDisplayedServingAmount(
+																						food,
+																						parseNumber(event.target.value),
+																						cupAmountDisplay,
+																					),
+																				)
+																			}
+																			disabled={isFlexible}
+																		/>
+																		<span className="table-unit-label">
+																			{getServingUnitLabel(
+																				food,
+																				cupAmountDisplay,
+																			)}
+																		</span>
+																	</div>
+																</TableCell>
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</Table>
+										</div>
 									</div>
 								</div>
 							</CardContent>
@@ -933,9 +1176,9 @@ export default function PurrcentageApp() {
 
 					<TabsContent value="planner" className="mode-panel">
 						<Card className="panel-card mode-card planner-card">
-							<CardHeader className="compact-header">
+							<CardHeader className="compact-header section-header">
 								<CardTitle>Transition planner</CardTitle>
-								<CardAction className="planner-actions">
+								<CardAction className="planner-actions section-action">
 									<label
 										className="planner-days-control"
 										htmlFor="planner-days-per-step"
@@ -1001,71 +1244,138 @@ export default function PurrcentageApp() {
 												Auto scale {autoScale ? "On" : "Off"}
 											</Button>
 										</div>
-										<div className="table-shell planner-editor-shell">
-											<Table className="planner-editor-table">
-												<TableHeader>
-													<TableRow>
-														<TableHead>Day range</TableHead>
-														{activeFoods.map((food) => (
-															<TableHead key={food.id}>{food.name}</TableHead>
-														))}
-														<TableHead className="planner-editor-actions-head">
-															<span className="sr-only">Actions</span>
-														</TableHead>
-													</TableRow>
-												</TableHeader>
-												<TableBody>
-													{phases.map((phase, index) => {
-														const phaseLabel = getPhaseLabel(index);
+										<div className="mobile-phase-list md:hidden">
+											{phases.map((phase, index) => {
+												const phaseLabel = getPhaseLabel(index);
 
-														return (
-															<TableRow key={phase.id}>
-																<TableCell className="planner-phase-label">
-																	{phaseLabel}
-																</TableCell>
+												return (
+													<Card
+														key={phase.id}
+														size="sm"
+														className="mobile-task-card mobile-phase-card"
+													>
+														<CardHeader className="compact-header mobile-task-header">
+															<div className="mobile-task-title">
+																<CardTitle>{phaseLabel}</CardTitle>
+																<p className="mobile-task-meta">
+																	{formatDayCount(daysPerPhase)} per range
+																</p>
+															</div>
+															<Button
+																type="button"
+																variant="outline"
+																size="sm"
+																aria-label={`Remove ${phaseLabel}`}
+																onClick={() => removePhase(phase.id)}
+																disabled={phases.length === 1}
+															>
+																<Trash2 data-icon="inline-start" />
+																Remove
+															</Button>
+														</CardHeader>
+														<CardContent className="mobile-task-body">
+															<div className="mobile-phase-grid">
 																{activeFoods.map((food) => (
-																	<TableCell
-																		key={food.id}
-																		className="planner-editor-cell"
-																	>
-																		<Input
-																			id={`phase-${phase.id}-${food.id}`}
-																			className="planner-phase-input"
-																			type="number"
-																			min="0"
-																			step="0.1"
-																			aria-label={`${phaseLabel} ${food.name}`}
-																			value={(
-																				phase.percentages[food.id] ?? 0
-																			).toFixed(1)}
-																			onChange={(event) =>
-																				updatePhasePercentage(
-																					phase.id,
-																					food.id,
-																					parseNumber(event.target.value),
-																				)
-																			}
-																			disabled={autoScale}
-																		/>
-																	</TableCell>
+																	<Field key={food.id}>
+																		<FieldLabel
+																			htmlFor={`mobile-phase-${phase.id}-${food.id}`}
+																		>
+																			{food.name}
+																		</FieldLabel>
+																		<FieldContent>
+																			<Input
+																				id={`mobile-phase-${phase.id}-${food.id}`}
+																				type="number"
+																				min="0"
+																				step="0.1"
+																				value={(
+																					phase.percentages[food.id] ?? 0
+																				).toFixed(1)}
+																				onChange={(event) =>
+																					updatePhasePercentage(
+																						phase.id,
+																						food.id,
+																						parseNumber(event.target.value),
+																					)
+																				}
+																				disabled={autoScale}
+																			/>
+																		</FieldContent>
+																	</Field>
 																))}
-																<TableCell className="planner-editor-actions-cell">
-																	<Button
-																		type="button"
-																		variant="outline"
-																		size="sm"
-																		aria-label={`Remove ${phaseLabel}`}
-																		onClick={() => removePhase(phase.id)}
-																		disabled={phases.length === 1}
-																	>
-																		<Trash2 />
-																	</Button>
-																</TableCell>
-															</TableRow>
-														);
-													})}
-												</TableBody>
-											</Table>
+															</div>
+														</CardContent>
+													</Card>
+												);
+											})}
+										</div>
+										<div className="hidden md:block">
+											<div className="table-shell planner-editor-shell">
+												<Table className="planner-editor-table">
+													<TableHeader>
+														<TableRow>
+															<TableHead>Day range</TableHead>
+															{activeFoods.map((food) => (
+																<TableHead key={food.id}>{food.name}</TableHead>
+															))}
+															<TableHead className="planner-editor-actions-head">
+																<span className="sr-only">Actions</span>
+															</TableHead>
+														</TableRow>
+													</TableHeader>
+													<TableBody>
+														{phases.map((phase, index) => {
+															const phaseLabel = getPhaseLabel(index);
+
+															return (
+																<TableRow key={phase.id}>
+																	<TableCell className="planner-phase-label">
+																		{phaseLabel}
+																	</TableCell>
+																	{activeFoods.map((food) => (
+																		<TableCell
+																			key={food.id}
+																			className="planner-editor-cell"
+																		>
+																			<Input
+																				id={`phase-${phase.id}-${food.id}`}
+																				className="planner-phase-input"
+																				type="number"
+																				min="0"
+																				step="0.1"
+																				aria-label={`${phaseLabel} ${food.name}`}
+																				value={(
+																					phase.percentages[food.id] ?? 0
+																				).toFixed(1)}
+																				onChange={(event) =>
+																					updatePhasePercentage(
+																						phase.id,
+																						food.id,
+																						parseNumber(event.target.value),
+																					)
+																				}
+																				disabled={autoScale}
+																			/>
+																		</TableCell>
+																	))}
+																	<TableCell className="planner-editor-actions-cell">
+																		<Button
+																			type="button"
+																			variant="outline"
+																			size="sm"
+																			aria-label={`Remove ${phaseLabel}`}
+																			onClick={() => removePhase(phase.id)}
+																			disabled={phases.length === 1}
+																		>
+																			<Trash2 />
+																		</Button>
+																	</TableCell>
+																</TableRow>
+															);
+														})}
+													</TableBody>
+												</Table>
+											</div>
 										</div>
 									</div>
 
@@ -1079,63 +1389,139 @@ export default function PurrcentageApp() {
 											</div>
 										</div>
 
-										<div className="table-shell planner-table-shell">
-											<Table>
-												<TableHeader>
-													<TableRow>
-														<TableHead>Day</TableHead>
-														<TableHead>Range</TableHead>
-														{activeFoods.map((food) => (
-															<TableHead key={food.id}>{food.name}</TableHead>
-														))}
-														<TableHead>Total</TableHead>
-													</TableRow>
-												</TableHeader>
-												<TableBody>
-													{transitionPlan.days.map((day) => (
-														<TableRow key={day.day}>
-															<TableCell>{day.day}</TableCell>
-															<TableCell>{day.phaseLabel}</TableCell>
+										<div className="mobile-results-list md:hidden">
+											{transitionDayGroups.map((group) => (
+												<Card
+													key={group.phaseId}
+													size="sm"
+													className="mobile-task-card mobile-result-card"
+												>
+													<CardHeader className="compact-header mobile-task-header">
+														<div className="mobile-task-title">
+															<CardTitle>{group.phaseLabel}</CardTitle>
+															<p className="mobile-task-meta">
+																{formatDayCount(group.dayCount)}
+															</p>
+														</div>
+														<div className="mobile-task-summary">
+															<span className="summary-label">Total</span>
+															<strong className="mobile-task-value">
+																{formatCalories(group.totalCalories)}
+															</strong>
+														</div>
+													</CardHeader>
+													<CardContent className="mobile-task-body">
+														<div className="mobile-result-foods">
 															{activeFoods.map((food) => {
 																const plannedFood =
-																	day.foods.find(
+																	group.foods.find(
 																		(entry) => entry.foodId === food.id,
 																	) ?? null;
 
 																return (
-																	<TableCell key={food.id}>
-																		{plannedFood ? (
-																			<div className="planner-serving">
-																				<span className="planner-serving-amount">
-																					{formatServingAmountForDisplay(
-																						food,
-																						plannedFood.servingAmount,
-																						cupAmountDisplay,
-																					)}
-																				</span>
-																				<span className="planner-serving-meta">
-																					{formatPercent(
-																						plannedFood.percentageOfGoal,
-																					)}
-																				</span>
+																	<div
+																		key={food.id}
+																		className="mobile-result-row"
+																	>
+																		<div className="mobile-result-copy">
+																			<div className="mobile-result-name">
+																				{food.name}
 																			</div>
-																		) : (
-																			<span className="planner-serving-meta">
-																				-
-																			</span>
-																		)}
-																	</TableCell>
+																			<div className="mobile-result-meta">
+																				{food.caloriesPerUnit} kcal /{" "}
+																				{food.unitType}
+																			</div>
+																		</div>
+																		<div className="mobile-result-value-wrap">
+																			{plannedFood ? (
+																				<>
+																					<div className="mobile-result-value">
+																						{formatServingAmountForDisplay(
+																							food,
+																							plannedFood.servingAmount,
+																							cupAmountDisplay,
+																						)}
+																					</div>
+																					<div className="mobile-result-percent">
+																						{formatPercent(
+																							plannedFood.percentageOfGoal,
+																						)}
+																					</div>
+																				</>
+																			) : (
+																				<div className="mobile-result-percent">
+																					-
+																				</div>
+																			)}
+																		</div>
+																	</div>
 																);
 															})}
-															<TableCell>
-																<span className="planner-total">
-																	{formatCalories(day.totalCalories)}
-																</span>
-															</TableCell>
+														</div>
+													</CardContent>
+												</Card>
+											))}
+										</div>
+
+										<div className="hidden md:block">
+											<div className="table-shell planner-table-shell">
+												<Table>
+													<TableHeader>
+														<TableRow>
+															<TableHead>Day</TableHead>
+															<TableHead>Range</TableHead>
+															{activeFoods.map((food) => (
+																<TableHead key={food.id}>{food.name}</TableHead>
+															))}
+															<TableHead>Total</TableHead>
 														</TableRow>
-													))}
-												</TableBody>
-											</Table>
+													</TableHeader>
+													<TableBody>
+														{transitionPlan.days.map((day) => (
+															<TableRow key={day.day}>
+																<TableCell>{day.day}</TableCell>
+																<TableCell>{day.phaseLabel}</TableCell>
+																{activeFoods.map((food) => {
+																	const plannedFood =
+																		day.foods.find(
+																			(entry) => entry.foodId === food.id,
+																		) ?? null;
+
+																	return (
+																		<TableCell key={food.id}>
+																			{plannedFood ? (
+																				<div className="planner-serving">
+																					<span className="planner-serving-amount">
+																						{formatServingAmountForDisplay(
+																							food,
+																							plannedFood.servingAmount,
+																							cupAmountDisplay,
+																						)}
+																					</span>
+																					<span className="planner-serving-meta">
+																						{formatPercent(
+																							plannedFood.percentageOfGoal,
+																						)}
+																					</span>
+																				</div>
+																			) : (
+																				<span className="planner-serving-meta">
+																					-
+																				</span>
+																			)}
+																		</TableCell>
+																	);
+																})}
+																<TableCell>
+																	<span className="planner-total">
+																		{formatCalories(day.totalCalories)}
+																	</span>
+																</TableCell>
+															</TableRow>
+														))}
+													</TableBody>
+												</Table>
+											</div>
 										</div>
 									</div>
 								</div>
